@@ -11,7 +11,9 @@ import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.item.database.JpaItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
+import org.springframework.batch.item.database.builder.JpaItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.json.JacksonJsonObjectReader;
@@ -25,6 +27,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.transaction.PlatformTransactionManager;
+
+import jakarta.persistence.EntityManagerFactory;
 @Configuration
 public class ConfigOfBatch {
    @Value("${file.input}")
@@ -42,17 +46,30 @@ public class ConfigOfBatch {
 
    }
 
-   @Bean
-   public JdbcBatchItemWriter<Customer> writer(DataSource datasource) {
-      // System.err.println(fileName);
-      return new JdbcBatchItemWriterBuilder<Customer>()
-            .itemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<Customer>())
-            .sql("INSERT INTO customer (id,name,age,email,phone) VALUES (:id,:name,:age,:email,:phone)")
-            .dataSource(datasource)
-            .beanMapped()
-            .build();
+   //------------------------------------------------------------
 
+   @Bean
+   public JpaItemWriter<Customer> writer(EntityManagerFactory factory){
+      return new JpaItemWriterBuilder<Customer>()
+      .entityManagerFactory(factory)
+      .build(); 
    }
+
+   //--------------------------------------------------------------------
+
+   // @Bean
+   // public JdbcBatchItemWriter<Customer> writer(DataSource datasource) {
+   //    // System.err.println(fileName);
+   //    return new JdbcBatchItemWriterBuilder<Customer>()
+   //          .itemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<Customer>())
+   //          .sql("INSERT INTO customer (id,name,age,email,phone) VALUES (:id,:name,:age,:email,:phone)")
+   //          .dataSource(datasource)
+   //          .beanMapped()
+   //          .build();
+
+   // }
+
+   //----------------------------------------------------------------------------
 
    // @Bean
    // public FlatFileItemReader<Customer> reader() {
@@ -107,7 +124,7 @@ public class ConfigOfBatch {
 
    @Bean
    public Step step1(JobRepository repo, PlatformTransactionManager transactionManager,
-         JdbcBatchItemWriter<Customer> writer) {
+         JpaItemWriter<Customer> writer) {
       return new StepBuilder("step1", repo)
             .<Customer, Customer>chunk(10, transactionManager)
             .reader(reader())
